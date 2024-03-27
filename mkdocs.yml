@@ -1,0 +1,50 @@
+site_name: Yosemite Documentation
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: blue
+    accent: indigo
+
+plugins:
+  - search
+  - mkdocstrings
+
+nav:
+  - Home: index.md
+  - Yosemite Core: core.md
+  - Core API Reference:
+      - CLI Text Styling: api/tools/yosemite.tools.text.md
+      - CLI Inputs & Dialogs: api/tools/yosemite.tools.input.md
+      - Animated Loaders (Depreciated): api/tools/yosemite.tools.loaders.md
+  - Yosemite ML:
+    - Getting Started: api/ml/ml.md
+    - YosemiteDatabase: api/ml/data/yosemite.ml.data.yosemite.md
+    - LLMs: api/ml/llm/yosemite.ml.llm.md
+    - Sentence-Transformers:
+      - SentenceBERT: api/ml/yosemite.ml.transformers.md
+      - Sentence Transformer: api/ml/transformers/transformer.md
+      - Cross Encoder: api/ml/transformers/ce.md
+      - Loss Functions: api/ml/transformers/loss.md
+      - Semantic Search: api/ml/transformers/semsearch.md
+      - Sentence Similarity: api/ml/transformers/sentsim.md
+    - Text Utiliies: api/ml/yosemite.ml.text.md
+    - Legacy:
+      - Database: api/ml/data/yosemite.ml.data.database.md
+      - Vector Database: api/ml/data/yosemite.ml.data.vector_database.md
+  - HEAT: heat.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/hsaeed3/hammadpy
