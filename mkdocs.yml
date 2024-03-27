@@ -5,6 +5,30 @@ theme:
     scheme: default
     primary: blue
     accent: indigo
+  features:
+    # - announce.dismiss
+    - content.action.edit
+    # - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    # - header.autohide
+    # - navigation.expand
+    - navigation.indexes
+    # - navigation.instant
+    # - navigation.prune
+    - navigation.sections
+    # - navigation.tabs
+    # - navigation.tabs.sticky
+    # - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    # - toc.integrate
 
 plugins:
   - search
@@ -12,6 +36,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Get Started: api/get_started.md
   - Yosemite Core: core.md
   - Core API Reference:
       - CLI Text Styling: api/tools/yosemite.tools.text.md
@@ -43,6 +68,7 @@ markdown_extensions:
   - pymdownx.superfences
   - toc:
       permalink: true
+  - attr_list
 
 extra:
   social:

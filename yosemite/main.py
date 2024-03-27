@@ -8,19 +8,52 @@ class Yosemite:
 
     Example:
         ```python
+        # Import Yosemite
+        from yosemite import Yosemite
+
+        # Initialize Yosemite
         core = Yosemite()
-        core.say("Hello, Yosemite!")
-        core.say("Hello, Yosemite!", bold=True)
+
+        # Styled Text
+        core.say("Hello, Yosemite!" color="blue", bg="white", bold=True, italic=True, underline=True)
+
+        # List
+        list_items = ["This is a list", "With some items", "And some colors"]
+        core.list(list_items, color="blue", bg="white", bold=True)
+
+        # ASCII Art
+        core.art("yosemite", art="random", color="rgb(255, 0, 0)")
+
+        # Loaders
+        with core.loader("Loading..."):
+            time.sleep(2)
+
+        # Inputs
+        name = core.input.ask("What is your name?")
+
+        # Dialogs
+        if core.dialog.confirm("Do you want to continue?"):
+            core.say(f"Hello, {name}!")
+        else:
+            core.say("Goodbye!")
         ```
 
-    Attributes:
-        art: A method to display ASCII art.
+    Methods:
+        art: A method to display ASCII art. 
         say: A method to display styled text.
         list: A method to display a list of items.
         loader: A class to display loading animations. (Depreciated)
         timer: A context manager to time code execution. 
         inputs: A class to handle user inputs.
         dialog: A class to display dialogs.
+
+    API Reference:
+        [Art Styles](./api/tools/yosemite.tools.text.md) <br>
+        [Text Styles](./api/tools/yosemite.tools.text.md) <br>
+        [Loaders](./api/tools/yosemite.tools.load.md) <br>
+        [Timer](./api/tools/yosemite.tools.load.md) <br>
+        [Inputs](./api/tools/yosemite.tools.input.md) <br>
+        [Dialogs](./api/tools/yosemite.tools.input.md) <br>
     """
     def __init__(self):
 
