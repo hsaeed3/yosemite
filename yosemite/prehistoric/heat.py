@@ -1,22 +1,6 @@
 
-# HEAT
-
-### Hammad's Extreme Artilery Toolkit
-
-In November 2023, I sat down and scratched my head because I wanted quick colored text in my Python code. Colorama was quick, but I said *Sure, I can make it FASTER*. So I made Yosemite version Beta-∞. It's called **HEAT**, or Hammad's Extreme Artilery Toolkit. So impressed with my work, I took it further; publishing my great script on PyPi.
-
-I actually included this as a module, because it doesnt add any extra dependencies to the package, so you can try it if you really want, with:
-
-```python
-from yosemite.prehistoric.heat import Core
-```
-
-Here's the entire '*package*', because open source and what not. Remember this is ancient, like a vault from November 2023. As you will be able to tell, this is truly an enterprise level product. <br/>
-
-
-```python
 """
-hammock ~ hammad's open code toolkit
+HEAT ~ hammad's extremely amplified toolkit
 
 v~final out of 10000000 attempts
 hopefully
@@ -303,4 +287,3 @@ if __name__ == '__main__':
         Core.ext(path='/Users/hammad/Desktop/dev/hamlib/core/nucleus/__init__.py', ext='.py')
     except Exception as e:
         raise CoreError(e)
-```
