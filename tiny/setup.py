@@ -1,14 +1,14 @@
 import setuptools
 
 setuptools.setup(
-    name="yosemite",
+    name="yosemite-tiny",
     version="0.1.0",
     author="Hammad Saeed",
     author_email="hammad@supportvectors.com",
-    description="yosemite",
+    description="yosemite tiny",
     entry_points={
         'console_scripts': [
-            'yosemite = yosemite.__cli__.cli:main',
+            'yosemite-tiny = yosemite_tiny.__cli__.cli:main',
         ],
     },
     long_description="""
@@ -26,16 +26,5 @@ Yosemite
 "libhammadpy-text",
 "prompt_toolkit",
 "wcwidth",
-'pathlib',
-'annoy',
-'anthropic',
-'ebooklib',
-'instructor',
-'pandas',
-'pdfminer.six',
-'PyPDF2',
-'sentence-transformers',
-'spacy',
-"Whoosh",
     ],
 )

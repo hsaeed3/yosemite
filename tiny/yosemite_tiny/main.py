@@ -1,6 +1,6 @@
-from yosemite.tools.text import Text
-from yosemite.tools.load import Loader, Timer
-from yosemite.tools.input import Input, Dialog
+from yosemite_tiny.tools.text import Text
+from yosemite_tiny.tools.load import Loader, Timer
+from yosemite_tiny.tools.input import Input, Dialog
 
 class Yosemite:
     """

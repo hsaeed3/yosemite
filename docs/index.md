@@ -2,6 +2,10 @@
 
 ### The Natural Park of **easy-to-use** Python Tools for **Data Science** & **Generative AI**.
 
+[[:fontawesome-brands-github:{ .md-footer-social__link }]](https://github.com/hsaeed3/yosemite)
+
+**Get Started** | **[API Reference](./api/get_started.md)** 
+
 Yosemite is my personal open source project, that has been developed constantly since November 2023. It is a collection of Python tools for Data Science and Generative AI, that I have developed for my own use, and uploaded to PyPI for others to use.
 Yosemite has come in quite a **LOT** a few shapes and sizes, so just for fun I've attached them all here.
 
