@@ -1,0 +1,22 @@
+/* fonts.css */
+
+/* Import the Lora font */
+@import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap');
+
+/* Import the JetBrains Mono font */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+/* Set the font family for the body text */
+body {
+  font-family: 'Lora', serif;
+}
+
+/* Set the font family for code blocks */
+pre, code {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Set the font family for headings (h1 to h6) */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'JetBrains Mono', monospace;
+}

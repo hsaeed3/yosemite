@@ -3,7 +3,7 @@
 
 ### Hammad's Extreme Artilery Toolkit
 
-In November 2023, I sat down and scratched my head because I wanted quick colored text in my Python code. Colorama was quick, but I said *Sure, I can make it FASTER*. So I made Yosemite version Beta-∞. It's called **HEAT**, or Hammad's Extreme Artilery Toolkit. So impressed with my work, I took it further; publishing my great script on PyPi.
+Last November I sat down and scratched my head because I wanted quick colored text in my Python code. Colorama was quick, but I said *Sure, I can make it BETTER.. YES.*. So I made Yosemite version Beta-∞. It's called **HEAT**, or Hammad's Extreme Artilery Toolkit. So impressed with my work, I took it further; publishing my great script on PyPi.
 
 I actually included this as a module, because it doesnt add any extra dependencies to the package, so you can try it if you really want, with:
 

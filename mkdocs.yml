@@ -1,10 +1,14 @@
-site_name: Yosemite Documentation
+site_name: Yosemite - Documentation
 theme:
   name: material
+  font:
+    text: DM Sans
+    code: JetBrains Mono
   palette:
-    scheme: default
-    primary: blue
-    accent: indigo
+    primary: blue grey
+    accent: deep orange
+  favicon: favicon/favicon.ico
+  logo: favicon/icon-web.png
   features:
     # - announce.dismiss
     - content.action.edit
@@ -32,16 +36,23 @@ theme:
 
 plugins:
   - search
-  - mkdocstrings
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          search: true
+          search_index_only: true
+          search_index_format: json
+          search_index_path: search_index.json
 
 nav:
   - Home: index.md
   - Get Started: api/get_started.md
-  - Yosemite Core: core.md
+  - Yosemite Core: api/core.md
   - Core API Reference:
       - CLI Text Styling: api/tools/yosemite.tools.text.md
       - CLI Inputs & Dialogs: api/tools/yosemite.tools.input.md
-      - Animated Loaders (Depreciated): api/tools/yosemite.tools.loaders.md
+      - Animated Loaders (Depreciated): api/tools/yosemite.tools.load.md
   - Yosemite ML:
     - Getting Started: api/ml/ml.md
     - YosemiteDatabase: api/ml/data/yosemite.ml.data.yosemite.md
@@ -57,7 +68,7 @@ nav:
     - Legacy:
       - Database: api/ml/data/yosemite.ml.data.database.md
       - Vector Database: api/ml/data/yosemite.ml.data.vector_database.md
-  - HEAT: heat.md
+  - HEAT: api/heat.md
 
 markdown_extensions:
   - admonition

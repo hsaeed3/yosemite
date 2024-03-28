@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import '@fontsource-variable/lexend';
+@import '@fontsource-variable/jetbrains-mono';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource-variable/aleo';
+@import '@fontsource-variable/biorhyme';
+@import '@fontsource/young-serif/400.css';
+@import "~@flaticon/flaticon-uicons/css/all/all";
+
+.biorhyme {
+  font-family: 'Biorhyme Variable', serif;
+}
+
+.aleo {
+  font-family: 'Aleo Variable', serif;
+  letter-spacing: -0.010em;
+}
+
+.young-serif {
+  font-family: 'Young Serif', serif;
+}
+
+.lexend {
+  font-family: 'Lexend Variable', sans-serif;
+}
+
+.jetbrains-mono {
+  font-family: 'JetBrains Mono Variable', monospace;
+}
+
+.dm-sans {
+  font-family: 'DM Sans Variable', sans-serif;
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

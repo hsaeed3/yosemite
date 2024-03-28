@@ -48,12 +48,12 @@ class Yosemite:
         dialog: A class to display dialogs.
 
     API Reference:
-        [Art Styles](./api/tools/yosemite.tools.text.md) <br>
-        [Text Styles](./api/tools/yosemite.tools.text.md) <br>
-        [Loaders](./api/tools/yosemite.tools.load.md) <br>
-        [Timer](./api/tools/yosemite.tools.load.md) <br>
-        [Inputs](./api/tools/yosemite.tools.input.md) <br>
-        [Dialogs](./api/tools/yosemite.tools.input.md) <br>
+        [Art Styles](tools/yosemite.tools.text.md) <br>
+        [Text Styles](tools/yosemite.tools.text.md) <br>
+        [Loaders](tools/yosemite.tools.load.md) <br>
+        [Timer](tools/yosemite.tools.load.md) <br>
+        [Inputs](tools/yosemite.tools.input.md) <br>
+        [Dialogs](tools/yosemite.tools.input.md) <br>
     """
     def __init__(self):
 
