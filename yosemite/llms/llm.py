@@ -3,60 +3,14 @@ from typing import Optional
 import anthropic
 import instructor
 from openai import OpenAI
+import re
 
 class LLM:
-    """
-    A simplified interface for 'deploying' LLMs in your code.
-
-    ```python
-    from yosemite.llms import LLM
-
-    llm = LLM(provider="anthropic")
-    completion = llm.invoke(
-        query="What is the capital of France?"
-    )
-    ```
-
-    ```bash
-    The capital of France is Paris.
-    ```
-
-    ```python
-    from pydantic import BaseModel
-
-    class Completion(BaseModel):
-        message: str
-
-    instructor = LLM(provider="openai")
-    completion = instructor.invoke(
-        query="What is the capital of France?",
-        pydantic_model=Completion
-    )
-    ```
-
-    ```bash
-    {
-        "message": "The capital of France is Paris."
-    }
-    ```
-
-    Args:
-        provider (str): The LLM provider to use. Supported providers are "openai", "anthropic", and "nvidia".
-        api_key (str, optional): The API key for the provider. Defaults to None.
-        base_url (str, optional): The base URL for the provider. Defaults to None.
-
-    Methods:
-        invoke: Invokes the LLM with the given query.
-
-    Raises:
-        ValueError: If the provider is not supported or the API key is not available.
-    """
-
-    
-    def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None):
         self.provider = provider.lower()
         self.api_key = api_key
         self.base_url = base_url
+        self.model_name_or_path = model
 
         if self.provider == "openai":
             if self.api_key is None:
@@ -78,6 +32,13 @@ class LLM:
             if self.base_url is None:
                 self.base_url = "https://integrate.api.nvidia.com/v1"
             self.llm = OpenAI(base_url=self.base_url, api_key=self.api_key)
+        elif self.provider == "transformers":
+            if self.model_name_or_path is None:
+                raise ValueError("Model name or path is required for transformers provider")
+            from transformers import AutoTokenizer, AutoModelForCausalLM, TextGenerationPipeline
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path, padding_side="left", truncation_side="left")
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_name_or_path)
+            self.pipeline = TextGenerationPipeline(model=self.model, tokenizer=self.tokenizer)
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
@@ -88,33 +49,14 @@ class LLM:
         model: str = "gpt-3.5-turbo-1106",
         pydantic_model=None,
         max_tokens: int = 1024,
-        temperature: float = 0.5,
+        temperature: float = 0.75,
         top_p: float = 1,
         stream: bool = False,
+        max_length: int = 100,
+        num_return_sequences: int = 1,
+        top_k: int = 50,
+        do_sample: bool = True,
     ):
-        """
-        Generates a completion for the given query.
-
-        Example:
-        ```python
-        completion = llm.invoke(
-            query="What is the capital of France?"
-        )
-        ```
-
-        Args:
-            system (str, optional): The system prompt. Defaults to None.
-            query (str, optional): The user query. Defaults to None.
-            model (str, optional): The model to use. Defaults to "gpt-3.5-turbo-1106".
-            pydantic_model (Any, optional): The Pydantic model to use for the response. Defaults to None.
-            max_tokens (int, optional): The maximum number of tokens to generate. Defaults to 1024.
-            temperature (float, optional): The sampling temperature. Defaults to 0.5.
-            top_p (float, optional): The nucleus sampling parameter. Defaults to 1.
-            stream (bool, optional): Whether to stream the response. Defaults to False.
-
-        Returns:
-            Any: The completion response.
-        """
         if query is None:
             raise ValueError("Query is required for instruct()")
         
@@ -187,6 +129,37 @@ class LLM:
                 return response
             else:
                 return completion.choices[0].message.content
+        elif self.provider == "transformers":
+            if system is None:
+                system = "You are a helpful assistant."
+            
+            prompt = f"{system}\n\nUser: {query}\nAssistant:"
+            
+            from transformers import AutoConfig, AutoTokenizer, AutoModelForCausalLM
+            
+            config = AutoConfig.from_pretrained(self.model_name_or_path)
+            tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path)
+            model = AutoModelForCausalLM.from_pretrained(self.model_name_or_path, config=config)
+            
+        generation_kwargs = {
+            "max_length": max_length,
+            "num_return_sequences": num_return_sequences,
+            "temperature": temperature,
+            "top_k": top_k,
+            "top_p": top_p,
+            "do_sample": do_sample,
+            "repetition_penalty": 1.2,
+            "no_repeat_ngram_size": 2,
+            "pad_token_id": tokenizer.eos_token_id,
+            "early_stopping": True,
+            "num_beams": 3,
+        }
+        
+        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=max_length)
+        generated_outputs = model.generate(**inputs, **generation_kwargs)
+        generated_text = tokenizer.decode(generated_outputs[0], skip_special_tokens=True)
+        generated_text = generated_text.split("Assistant:", 1)[1].strip()
+        return generated_text
 
 if __name__ == "__main__":
     instructor = LLM(provider="openai")
@@ -194,4 +167,9 @@ if __name__ == "__main__":
         query="What is the capital of France?",
         stream=True
     )
+    print(completion)
+    
+    local_llm = LLM(provider="transformers", model="openai-community/gpt2")
+    query = "What is the capital of France?"
+    completion = local_llm.invoke(query=query, stream=True)
     print(completion)
