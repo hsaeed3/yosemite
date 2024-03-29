@@ -4,6 +4,8 @@ from typing import Union, List, Tuple, Optional, Dict
 import os
 import uuid
 from annoy import AnnoyIndex
+from whoosh.query import Or, Term
+from whoosh.qparser import QueryParser
 from whoosh import index as whoosh_index
 from whoosh.analysis import StandardAnalyzer, FancyAnalyzer, LanguageAnalyzer, KeywordAnalyzer
 from whoosh.fields import Schema, TEXT, ID, KEYWORD, STORED
@@ -11,8 +13,6 @@ from whoosh.qparser import QueryParser, QueryParserError, MultifieldParser
 import pandas as pd
 from PyPDF2 import PdfReader
 from ebooklib import epub
-
-from yosemite.llms import LLM
 
 class Database:
     """
@@ -217,40 +217,6 @@ class Database:
         writer.commit()
 
     def search(self, query: str, fields: Optional[List[str]] = None, k: int = 5) -> List[Tuple[str, str, List[float]]]:
-        """
-        A method to search the Whoosh & Annoy index.
-
-        Example:
-            ```python
-            db = YosemiteDatabase()
-            db.load("./databases/db")
-            results = db.search("test")
-            for doc_id, chunk, vector in results:
-                print(f"Document ID: {doc_id}")
-                print(f"Chunk: {chunk}")
-                print(f"Vector: {vector}")
-                print("---")
-            ```
-
-            ```bash
-            Document ID: 1
-            Chunk: This is a test document.
-            Vector: [0.1, 0.2, 0.3, ...]
-            ---
-            Document ID: 2
-            Chunk: This is another test document.
-            Vector: [0.4, 0.5, 0.6, ...]
-            ---
-            ```
-
-        Args:
-            query (str): The search query.
-            fields (Optional[List[str]], optional): The fields to search in. Defaults to None.
-            k (int, optional): The number of results to return. Defaults to 5.
-
-        Returns:
-            List[Tuple[str, str, List[float]]]: A list of tuples containing the document ID, chunk, and vector.
-        """
         if not self.ix:
             raise ValueError("Index has not been built or loaded.")
 
@@ -278,7 +244,7 @@ class Database:
                     indices = index.get_nns_by_vector(query_vector, k, include_distances=False)
                     for idx in indices:
                         chunk = hit["chunks"].split("\n")[idx]
-                        ranked_results.append((doc_id, chunk, doc_vectors[idx]))
+                        ranked_results.append((doc_id, chunk, doc_vectors[idx].tolist()))
                 return ranked_results
             except QueryParserError as e:
                 print(f"QueryParserError: {e}")
@@ -287,19 +253,21 @@ class Database:
     def search_and_rank(self, query: str, k: int = 5) -> List[Tuple[str, str, float]]:
         if not self.ix:
             raise ValueError("Index has not been built or loaded.")
+
+        # Extract relevant keywords from the query using Whoosh
         with self.ix.searcher() as searcher:
-            parser = QueryParser("content", schema=self.schema)
-            try:
-                q = parser.parse(query)
-                whoosh_results = searcher.search(q, limit=k)
-                whoosh_chunks = [hit["chunks"] for hit in whoosh_results]
-                doc_ids = [hit["id"] for hit in whoosh_results]
-                doc_vectors = [hit["vectors"] for hit in whoosh_results]
-            except QueryParserError as e:
-                print(f"QueryParserError: {e}")
-                whoosh_chunks = []
-                doc_ids = []
-                doc_vectors = []
+            qp = QueryParser("content", schema=self.schema)
+            q = qp.parse(query)
+            keywords = q.all_terms()
+
+        with self.ix.searcher() as searcher:
+            # Use the extracted keywords for searching
+            q = Or([Term("content", keyword) for keyword in keywords])
+            whoosh_results = searcher.search(q, limit=k)
+            whoosh_chunks = [hit["chunks"] for hit in whoosh_results]
+            doc_ids = [hit["id"] for hit in whoosh_results]
+            doc_vectors = [hit["vectors"] for hit in whoosh_results]
+
         embedder = SentenceTransformer(self.model_name)
         query_vector = embedder.embed([query])[0][1]
         vector_results = []
@@ -316,12 +284,20 @@ class Database:
 
         combined_results = whoosh_chunks + [chunk for _, chunk in vector_results]
         cross_encode = CrossEncode()
-        ranked_results = cross_encode.rank(query, combined_results, [])
-        return [(doc_id, chunk, score) for (doc_id, chunk), score in ranked_results]
-    
+        ranked_results = cross_encode.rank(query, combined_results)
+
+        return ranked_results
+
 class RAG:
     def __init__(self, provider: str = "openai", api_key: Optional[str] = None, base_url: Optional[str] = None):
-        self.llm = LLM(provider, api_key, base_url)
+        self.llm = None
+        from yosemite.llms import LLM
+        try:
+            self.llm = LLM(provider, api_key, base_url)
+            print(f"LLM initialized with provider: {provider}")
+        except Exception as e:
+            print(f"Error initializing LLM: {e}")
+            
 
     def build(self, db: Union[str, Database] = None):
         if not db:
@@ -350,22 +326,31 @@ class RAG:
 
     def invoke(self, query: str, k: int = 5):
         search_results = self.db.search_and_rank(query, k)
-        search_chunks = [chunk for _, chunk, _ in search_results]
+        search_chunks = [str(result[1]) for result in search_results]
         
+        search_texts = []
+        for chunk in search_chunks:
+            text_start_index = chunk.find(": ")
+            if text_start_index != -1:
+                text = chunk[text_start_index + 2:]
+                search_texts.append(text)
+            else:
+                search_texts.append(chunk)
+
         system_prompt = f"Your name is {self.name}. You are an AI {self.role}. Your goal is to {self.goal}. Your tone should be {self.tone}."
-        
+
         if self.additional_instructions:
             system_prompt += f" Additional instructions: {self.additional_instructions}"
-        
+
         system_prompt += "\n\nYou have received the following relevant information to respond to the query:\n\n"
-        system_prompt += "\n".join(search_chunks)
+        system_prompt += "\n".join(search_texts)
         system_prompt += f"\n\nUse this information to provide a helpful response to the following query: {query}"
-        
+
         response = self.llm.invoke(
             system=system_prompt,
             query=query
         )
-        
+
         return response
 
 if __name__ == "__main__":

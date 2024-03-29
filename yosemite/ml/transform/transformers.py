@@ -46,28 +46,27 @@ class CrossEncoder:
     Initializes the CrossEncoder with a specified model. Default model is "cross-encoder/ms-marco-MiniLM-L-12-v2".
 
     Example:
-        ```python
-        sentences = [
-            "The cat is sitting on the mat.",
-            "The dog is playing in the park.",
-            "Paris is the capital of France.",
-            "London is the capital of England.",
-            "A feline is resting on the rug.",
-        ]
+    ```python
+    sentences = [
+        "The cat is sitting on the mat.",
+        "The dog is playing in the park.",
+        "Paris is the capital of France.",
+        "London is the capital of England.",
+        "A feline is resting on the rug.",
+    ]
+    cross_encode = CrossEncoder()
+    query = "What is the capital of France?"
+    ranked_sentences = cross_encode.rank(query, sentences)
+    ```
 
-        cross_encode = CrossEncoder()
-        query = "What is the capital of France?"
-        ranked_sentences = cross_encode.rank(query, sentences1, sentences2)
-        ```
-
-        ```bash
-        CrossEncoder results:
-        Paris is the capital of France. (Score: 0.99)
-        London is the capital of England. (Score: 0.98)
-        The cat is sitting on the mat. (Score: 0.97)
-        The dog is playing in the park. (Score: 0.96)
-        A feline is resting on the rug. (Score: 0.95)
-        ```
+    ```bash
+    CrossEncoder results:
+    Paris is the capital of France. (Score: 0.99)
+    London is the capital of England. (Score: 0.98)
+    The cat is sitting on the mat. (Score: 0.97)
+    The dog is playing in the park. (Score: 0.96)
+    A feline is resting on the rug. (Score: 0.95)
+    ```
 
     Args:
         model_name : str, optional
@@ -75,40 +74,35 @@ class CrossEncoder:
         max_length : int, optional
             The maximum length of the input sequences (default is None)
     """
+
     def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-12-v2", max_length: int = None):
         self.model = CrossEncoderModel(model_name, max_length=max_length)
 
-    def rank(self, query: str, x: List[str], y: List[str]) -> List[Tuple[str, float]]:
+    def rank(self, query: str, sentences: List[str]) -> List[Tuple[str, float]]:
         """
-        Re-ranks sentences formed by combining two lists based on their relevance to a single query using the CrossEncoder model.
+        Re-ranks sentences based on their relevance to a single query using the CrossEncoder model.
 
         Example:
-            ```python
-            from sentence_transformers import CrossEncoder
-
-            CrossEncoder.rank("What is the capital of France?", ["Paris is the capital of France."], ["London is the capital of England."])
-            ```
+        ```python
+        from sentence_transformers import CrossEncoder
+        CrossEncoder.rank("What is the capital of France?", ["Paris is the capital of France.", "London is the capital of England."])
+        ```
 
         Args:
             query : str
                 The query to use for re-ranking
-            x : List[str]
-                The first list of sentences
-            y : List[str]
-                The second list of sentences
+            sentences : List[str]
+                The list of sentences to be ranked
 
         Returns:
             List[Tuple[str, float]]
                 A list of ranked sentences with their scores
         """
-        sentences = x + y
         if not sentences:
             return []
 
         scores = self.model.predict([(query, sentence) for sentence in sentences])
-
         ranked_sentences = [(sentence, score) for sentence, score in sorted(zip(sentences, scores), key=lambda x: x[1], reverse=True)]
-
         return ranked_sentences
     
 class Loss:
