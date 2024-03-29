@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+explore/yosemite_env
+
 # C extensions
 *.so
 
