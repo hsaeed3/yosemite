@@ -3,44 +3,84 @@ from typing import Optional
 import anthropic
 import instructor
 from openai import OpenAI
-import re
+import requests
+from mistralai.client import MistralClient
+from mistralai.models.chat_completion import ChatMessage
+from huggingface_hub import InferenceClient
 
 class LLM:
     def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None):
-        self.provider = provider.lower()
-        self.api_key = api_key
-        self.base_url = base_url
-        self.model_name_or_path = model
+            """
+            Initializes the LLM class with the specified provider, API key, base URL, and model.
 
-        if self.provider == "openai":
-            if self.api_key is None:
-                self.api_key = os.getenv("OPENAI_API_KEY")
-            if self.api_key is None:
-                raise ValueError("OpenAI API key is not available")
-            self.llm = instructor.patch(OpenAI(api_key=self.api_key))
-        elif self.provider == "anthropic":
-            if self.api_key is None:
-                self.api_key = os.getenv("ANTHROPIC_API_KEY")
-            if self.api_key is None:
-                raise ValueError("Anthropic API key is not available")
-            self.client = anthropic.Anthropic(api_key=self.api_key)
-        elif self.provider == "nvidia":
-            if self.api_key is None:
-                self.api_key = os.getenv("NVIDIA_API_KEY")
-            if self.api_key is None:
-                raise ValueError("NVIDIA API key is not available")
-            if self.base_url is None:
-                self.base_url = "https://integrate.api.nvidia.com/v1"
-            self.llm = OpenAI(base_url=self.base_url, api_key=self.api_key)
-        elif self.provider == "transformers":
-            if self.model_name_or_path is None:
-                raise ValueError("Model name or path is required for transformers provider")
-            from transformers import AutoTokenizer, AutoModelForCausalLM, TextGenerationPipeline
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path, padding_side="left", truncation_side="left")
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_name_or_path)
-            self.pipeline = TextGenerationPipeline(model=self.model, tokenizer=self.tokenizer)
-        else:
-            raise ValueError(f"Unsupported provider: {self.provider}")
+            Args:
+                provider (str): The provider for the language model. Supported providers are "openai", "anthropic", "nvidia",
+                                "ai21", "mistral", "huggingface", and "transformers".
+                api_key (str, optional): The API key for the provider. Defaults to None.
+                base_url (str, optional): The base URL for the provider. Only applicable for the "nvidia" provider. Defaults to None.
+                model (str, optional): The name or path of the model. Only applicable for the "transformers" provider. Defaults to None.
+
+            Raises:
+                ValueError: If the API key is not available for the specified provider.
+
+            Examples:
+                Initialize LLM class with OpenAI provider and API key:
+                >>> llm = LLM(provider="openai", api_key="YOUR_OPENAI_API_KEY")
+
+                Initialize LLM class with NVIDIA provider, API key, and base URL:
+                >>> llm = LLM(provider="nvidia", api_key="YOUR_NVIDIA_API_KEY", base_url="https://integrate.api.nvidia.com/v1")
+
+                Initialize LLM class with Transformers provider and model name or path:
+                >>> llm = LLM(provider="transformers", model="gpt2")
+            """
+            self.provider = provider.lower()
+            self.api_key = api_key
+            self.base_url = base_url
+            self.model_name_or_path = model
+
+            if self.provider == "openai":
+                if self.api_key is None:
+                    self.api_key = os.getenv("OPENAI_API_KEY")
+                if self.api_key is None:
+                    raise ValueError("OpenAI API key is not available")
+                self.llm = instructor.patch(OpenAI(api_key=self.api_key))
+            elif self.provider == "anthropic":
+                if self.api_key is None:
+                    self.api_key = os.getenv("ANTHROPIC_API_KEY")
+                if self.api_key is None:
+                    raise ValueError("Anthropic API key is not available")
+                self.client = anthropic.Anthropic(api_key=self.api_key)
+            elif self.provider == "nvidia":
+                if self.api_key is None:
+                    self.api_key = os.getenv("NVIDIA_API_KEY")
+                if self.api_key is None:
+                    raise ValueError("NVIDIA API key is not available")
+                if self.base_url is None:
+                    self.base_url = "https://integrate.api.nvidia.com/v1"
+                self.llm = OpenAI(base_url=self.base_url, api_key=self.api_key)
+            elif self.provider == "ai21":
+                if self.api_key is None:
+                    self.api_key = os.getenv("AI21_API_KEY")
+                if self.api_key is None:
+                    raise ValueError("AI21 API key is not available")
+                self.url = "https://api.ai21.com/studio/v1/j2-mid/complete"
+            elif self.provider == "mistral":
+                if self.api_key is None:
+                    self.api_key = os.getenv("MISTRAL_API_KEY")
+                if self.api_key is None:
+                    raise ValueError("Mistral API key is not available")
+                self.client = MistralClient(api_key=self.api_key)
+            elif self.provider == "huggingface":
+                self.client = InferenceClient()
+            elif self.provider == "transformers":
+                if self.model_name_or_path is None:
+                    raise ValueError("Model name or path is required for transformers provider")
+                from transformers import AutoTokenizer, AutoModelForCausalLM, TextGenerationPipeline
+                self.tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path, padding_side="left", truncation_side="left")
+                self.model = AutoModelForCausalLM.from_pretrained(self.model_name_or_path)
+                self.pipeline = TextGenerationPipeline(model=self.model, tokenizer=self.tokenizer)
+            else:
+                raise ValueError(f"Unsupported provider: {self.provider}")
 
     def invoke(
         self,
@@ -129,6 +169,67 @@ class LLM:
                 return response
             else:
                 return completion.choices[0].message.content
+        elif self.provider == "ai21":
+            payload = {
+                "numResults": 1,
+                "maxTokens": max_tokens,
+                "minTokens": 0,
+                "temperature": temperature,
+                "topP": top_p,
+                "topKReturn": 0,
+                "frequencyPenalty": {
+                    "scale": 0,
+                    "applyToWhitespaces": True,
+                    "applyToPunctuations": True,
+                    "applyToNumbers": True,
+                    "applyToStopwords": True,
+                    "applyToEmojis": True
+                },
+                "presencePenalty": {
+                    "scale": 0,
+                    "applyToWhitespaces": True,
+                    "applyToPunctuations": True,
+                    "applyToNumbers": True,
+                    "applyToStopwords": True,
+                    "applyToEmojis": True
+                },
+                "countPenalty": {
+                    "scale": 0,
+                    "applyToWhitespaces": True,
+                    "applyToPunctuations": True,
+                    "applyToNumbers": True,
+                    "applyToStopwords": True,
+                    "applyToEmojis": True
+                }
+            }
+            headers = {
+                "accept": "application/json",
+                "content-type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+            response = requests.post(self.url, json=payload, headers=headers)
+            return response.json()["completions"][0]["data"]["text"]
+        elif self.provider == "mistral":
+            messages = [
+                ChatMessage(role="user", content=query)
+            ]
+            if stream:
+                stream_response = self.client.chat_stream(model=model, messages=messages)
+                response = ""
+                for chunk in stream_response:
+                    response += chunk.choices[0].delta.content
+                return response
+            else:
+                chat_response = self.client.chat(model=model, messages=messages)
+                return chat_response.choices[0].message.content
+        elif self.provider == "huggingface":
+            if stream:
+                response = ""
+                for token in self.client.text_generation(query, max_new_tokens=max_tokens, temperature=temperature, top_p=top_p, stream=True):
+                    response += token
+                return response
+            else:
+                return self.client.text_generation(query, max_new_tokens=max_tokens, temperature=temperature, top_p=top_p)
         elif self.provider == "transformers":
             if system is None:
                 system = "You are a helpful assistant."

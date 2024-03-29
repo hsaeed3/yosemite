@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="yosemite",
-    version="0.1.07",
+    version="0.1.08",
     author="Hammad Saeed",
     author_email="hammad@supportvectors.com",
     description="yosemite",
