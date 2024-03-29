@@ -1,5 +1,5 @@
 from yosemite.ml.text import Chunker
-from yosemite.ml.transformers import SentenceTransformer, CrossEncoder as CrossEncode
+from yosemite.ml.transform.transformers import SentenceTransformer, CrossEncoder as CrossEncode
 from typing import Union, List, Tuple, Optional, Dict
 import os
 import uuid
@@ -14,7 +14,7 @@ from ebooklib import epub
 
 from yosemite.llms import LLM
 
-class YosemiteDatabase:
+class Database:
     """
     A Unified & Local Database with no backend services required. Built using Whoosh & Annoy. Combines the power of Whoosh for text search and Annoy for vector search, to deliver incredibly easy to use and powerful search capabilities.
 
@@ -320,23 +320,28 @@ class YosemiteDatabase:
         return [(doc_id, chunk, score) for (doc_id, chunk), score in ranked_results]
     
 class RAG:
-    def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None):
-        self.db = YosemiteDatabase()
+    def __init__(self, provider: str = "openai", api_key: Optional[str] = None, base_url: Optional[str] = None):
         self.llm = LLM(provider, api_key, base_url)
 
-    def build(self, db_dir: str, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None):
-        self.db = YosemiteDatabase()
-        if not db_dir:
-            db_dir = "./databases/db"
-        if os.path.exists(db_dir):
-            print("Loading Database...")
-            self.db.load(db_dir)
-        else:
-            print(f"Creating New Database @ {db_dir}...")
-            self.db.create(db_dir)
-        self.llm = LLM(provider, api_key, base_url)
+    def build(self, db: Union[str, Database] = None):
+        if not db:
+            self.db = Database()
+            print("Creating New Database... @ default path = './databases/db'")
+            self.db.create()
+        if isinstance(db, str):
+            self.db = Database()
+            if not db:
+                db = "./databases/db"
+            if os.path.exists(db):
+                print("Loading Database...")
+                self.db.load(db)
+            else:
+                print(f"Creating New Database @ {db}...")
+                self.db.create(db)
+        elif isinstance(db, Database):
+            self.db = db
 
-    def create_agent(self, name: str = "RAG Genius", role: str = "assistant", goal: str = "answer questions in a helpful manner", tone: str = "friendly", additional_instructions: Optional[str] = None):
+    def customize(self, name: str = "RAG Genius", role: str = "assistant", goal: str = "answer questions in a helpful manner", tone: str = "friendly", additional_instructions: Optional[str] = None):
         self.name = name
         self.role = role
         self.goal = goal
@@ -364,16 +369,35 @@ class RAG:
         return response
 
 if __name__ == "__main__":
-    db = YosemiteDatabase()
+    # Create a new database
+    db = Database()
     db.create()
+    
+    # Add documents to the database
     documents = [
         {"content": "This is a test document."},
         {"content": "This is another test document."}
     ]
     db.add(documents)
+    
+    # Search the database
     results = db.search("test")
     for doc_id, chunk, vector in results:
         print(f"Document ID: {doc_id}")
         print(f"Chunk: {chunk}")
         print(f"Vector: {vector}")
         print("---")
+    
+    # Create a RAG instance with default values
+    # rag = RAG()
+    
+    # Build the RAG instance with the created database
+    # rag.build(db)
+    
+    # Customize the RAG instance (optional)
+    # rag.customize(name="RAG Genius", role="assistant", goal="answer questions in a helpful manner", tone="friendly")
+    
+    # Invoke the RAG instance with a query
+    # query = "What is a test document?"
+    # response = rag.invoke(query)
+    # print(response)
