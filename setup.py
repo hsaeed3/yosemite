@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="yosemite",
-    version="0.1.0",
+    version="0.1.03",
     author="Hammad Saeed",
     author_email="hammad@supportvectors.com",
     description="yosemite",
@@ -23,6 +23,7 @@ Yosemite
     python_requires='>3.9',
     install_requires=[
 "art",
+'colorama',
 "libhammadpy-text",
 "prompt_toolkit",
 "wcwidth",
@@ -36,6 +37,7 @@ Yosemite
 'PyPDF2',
 'sentence-transformers',
 'spacy',
+'wheel',
 "Whoosh",
     ],
 )
