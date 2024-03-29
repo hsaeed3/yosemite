@@ -1,5 +1,5 @@
-from yosemite.ml.text.util import Chunker, SentenceTransformer
-from yosemite.ml.text.cross_encode import CrossEncoder as CrossEncode
+from yosemite.ml.text import Chunker
+from yosemite.ml.transformers import SentenceTransformer, CrossEncoder as CrossEncode
 from typing import Union, List, Tuple, Optional, Dict
 import os
 import uuid
@@ -11,6 +11,8 @@ from whoosh.qparser import QueryParser, QueryParserError, MultifieldParser
 import pandas as pd
 from PyPDF2 import PdfReader
 from ebooklib import epub
+
+from yosemite.llms import LLM
 
 class YosemiteDatabase:
     """
@@ -131,7 +133,7 @@ class YosemiteDatabase:
         for _, row in df.iterrows():
             doc_id = str(row[id_column])
             doc_content = row[content_column]
-            chunks = chunker.chunk_text(doc_content)
+            chunks = chunker.chunk(doc_content)
             vectors = [embedder.embed([chunk])[0][1] for chunk in chunks]
             writer.add_document(id=doc_id, content=doc_content, chunks="\n".join(chunks), vectors=vectors)
         writer.commit()
@@ -174,7 +176,7 @@ class YosemiteDatabase:
                 continue
 
             doc_id = str(uuid.uuid4())
-            chunks = chunker.chunk_text(content)
+            chunks = chunker.chunk(content)
             vectors = [embedder.embed([chunk])[0][1] for chunk in chunks]
             writer.add_document(id=doc_id, content=content, chunks="\n".join(chunks), vectors=vectors)
         writer.commit()
@@ -209,7 +211,7 @@ class YosemiteDatabase:
             else:
                 doc_id = doc.get("id", str(uuid.uuid4()))
             doc_content = doc["content"]
-            chunks = chunker.chunk_text(doc_content)
+            chunks = chunker.chunk(doc_content)
             vectors = [embedder.embed([chunk])[0][1] for chunk in chunks]
             writer.add_document(id=doc_id, content=doc_content, chunks="\n".join(chunks), vectors=vectors)
         writer.commit()
@@ -283,39 +285,6 @@ class YosemiteDatabase:
                 return []
             
     def search_and_rank(self, query: str, k: int = 5) -> List[Tuple[str, str, float]]:
-        """
-        A method to search and rank the Whoosh & Annoy index.
-
-        Example:
-            ```python
-            db = YosemiteDatabase()
-            db.load("./databases/db")
-            results = db.search_and_rank("test")
-            for doc_id, chunk, score in results:
-                print(f"Document ID: {doc_id}")
-                print(f"Chunk: {chunk}")
-                print(f"Score: {score}")
-                print("---")
-            ```
-
-            ```bash
-            Document ID: 1
-            Chunk: This is a test document.
-            Score: 0.9
-            ---
-            Document ID: 2
-            Chunk: This is another test document.
-            Score: 0.8
-            ---
-            ```
-
-        Args:
-            query (str): The search query.
-            k (int, optional): The number of results to return. Defaults to 5.
-
-        Returns:
-            List[Tuple[str, str, float]]: A list of tuples containing the document ID, chunk, and score.
-        """
         if not self.ix:
             raise ValueError("Index has not been built or loaded.")
         with self.ix.searcher() as searcher:
@@ -324,13 +293,17 @@ class YosemiteDatabase:
                 q = parser.parse(query)
                 whoosh_results = searcher.search(q, limit=k)
                 whoosh_chunks = [hit["chunks"] for hit in whoosh_results]
+                doc_ids = [hit["id"] for hit in whoosh_results]
+                doc_vectors = [hit["vectors"] for hit in whoosh_results]
             except QueryParserError as e:
                 print(f"QueryParserError: {e}")
                 whoosh_chunks = []
+                doc_ids = []
+                doc_vectors = []
         embedder = SentenceTransformer(self.model_name)
         query_vector = embedder.embed([query])[0][1]
         vector_results = []
-        for doc_id, doc_chunks, doc_vectors in zip(self.document_ids, self.sentences, self.vectors):
+        for doc_id, doc_chunks, doc_vectors in zip(doc_ids, whoosh_chunks, doc_vectors):
             if not self.dimension:
                 self.dimension = len(doc_vectors[0])
             index = AnnoyIndex(self.dimension, 'angular')
@@ -339,12 +312,56 @@ class YosemiteDatabase:
             index.build(10)
             indices = index.get_nns_by_vector(query_vector, k, include_distances=False)
             for idx in indices:
-                vector_results.append((doc_id, doc_chunks[idx]))
+                vector_results.append((doc_id, doc_chunks.split("\n")[idx]))
 
         combined_results = whoosh_chunks + [chunk for _, chunk in vector_results]
         cross_encode = CrossEncode()
         ranked_results = cross_encode.rank(query, combined_results, [])
         return [(doc_id, chunk, score) for (doc_id, chunk), score in ranked_results]
+    
+class RAG:
+    def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None):
+        self.db = YosemiteDatabase()
+        self.llm = LLM(provider, api_key, base_url)
+
+    def build(self, db_dir: str, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None):
+        self.db = YosemiteDatabase()
+        if not db_dir:
+            db_dir = "./databases/db"
+        if os.path.exists(db_dir):
+            print("Loading Database...")
+            self.db.load(db_dir)
+        else:
+            print(f"Creating New Database @ {db_dir}...")
+            self.db.create(db_dir)
+        self.llm = LLM(provider, api_key, base_url)
+
+    def create_agent(self, name: str = "RAG Genius", role: str = "assistant", goal: str = "answer questions in a helpful manner", tone: str = "friendly", additional_instructions: Optional[str] = None):
+        self.name = name
+        self.role = role
+        self.goal = goal
+        self.tone = tone
+        self.additional_instructions = additional_instructions
+
+    def invoke(self, query: str, k: int = 5):
+        search_results = self.db.search_and_rank(query, k)
+        search_chunks = [chunk for _, chunk, _ in search_results]
+        
+        system_prompt = f"Your name is {self.name}. You are an AI {self.role}. Your goal is to {self.goal}. Your tone should be {self.tone}."
+        
+        if self.additional_instructions:
+            system_prompt += f" Additional instructions: {self.additional_instructions}"
+        
+        system_prompt += "\n\nYou have received the following relevant information to respond to the query:\n\n"
+        system_prompt += "\n".join(search_chunks)
+        system_prompt += f"\n\nUse this information to provide a helpful response to the following query: {query}"
+        
+        response = self.llm.invoke(
+            system=system_prompt,
+            query=query
+        )
+        
+        return response
 
 if __name__ == "__main__":
     db = YosemiteDatabase()

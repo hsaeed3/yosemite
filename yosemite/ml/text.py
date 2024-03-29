@@ -33,7 +33,10 @@ class Chunker:
     """
 
     def __init__(self, model: str = "en_core_web_sm"):
-        ensure_model(model)
+        try:
+            ensure_model(model)
+        except Exception as e:
+            raise Exception(f"Failed to load spaCy model {model} Please use the spacy CLI, by entering this command in your terminal 'spacy download {model}'. {e}")
         self.nlp = spacy.load(model)
 
     def chunk(self, text: Union[str, List[str], Tuple[str], List[Tuple[str]]]) -> List[str]:
