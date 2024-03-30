@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import Optional
 import anthropic
 import instructor
@@ -7,6 +8,7 @@ import requests
 from mistralai.client import MistralClient
 from mistralai.models.chat_completion import ChatMessage
 from huggingface_hub import InferenceClient
+import xai_sdk
 
 class LLM:
     def __init__(self, provider: str, api_key: Optional[str] = None, base_url: Optional[str] = None, model: Optional[str] = None):
@@ -72,6 +74,9 @@ class LLM:
                 self.client = MistralClient(api_key=self.api_key)
             elif self.provider == "huggingface":
                 self.client = InferenceClient()
+            elif self.provider == "grok":
+                self.client = xai_sdk.Client()
+                self.chat = self.client.chat
             elif self.provider == "transformers":
                 if self.model_name_or_path is None:
                     raise ValueError("Model name or path is required for transformers provider")
@@ -81,6 +86,19 @@ class LLM:
                 self.pipeline = TextGenerationPipeline(model=self.model, tokenizer=self.tokenizer)
             else:
                 raise ValueError(f"Unsupported provider: {self.provider}")
+            
+    async def invoke_grok(self, query: str, stream: bool = False):
+        conversation = self.chat.create_conversation()
+        
+        if stream:
+            token_stream, _ = conversation.add_response(query)
+            response = ""
+            async for token in token_stream:
+                response += token
+            return response
+        else:
+            response = await conversation.add_response_no_stream(query)
+            return response.message
 
     def invoke(
         self,
@@ -230,6 +248,8 @@ class LLM:
                 return response
             else:
                 return self.client.text_generation(query, max_new_tokens=max_tokens, temperature=temperature, top_p=top_p)
+        elif self.provider == "grok":
+            return asyncio.run(self.invoke_grok(query, stream))
         elif self.provider == "transformers":
             if system is None:
                 system = "You are a helpful assistant."

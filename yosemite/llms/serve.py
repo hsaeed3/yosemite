@@ -3,8 +3,71 @@ import json
 from typing import List, Dict, Union, Optional
 from yosemite.llms import LLM
 from yosemite import Yosemite
-from yosemite.ml import RAG
+from yosemite.ml.database import Database
 from yosemite.tools.input import Input, Dialog
+
+class RAG:
+    def __init__(self, provider: str = "openai", api_key: Optional[str] = None, base_url: Optional[str] = None):
+        self.llm = None
+        try:
+            self.llm = LLM(provider, api_key, base_url)
+            print(f"LLM initialized with provider: {provider}")
+        except Exception as e:
+            print(f"Error initializing LLM: {e}")
+
+    def build(self, db: Union[str, Database] = None):
+        if not db:
+            self.db = Database()
+            print("Creating New Database... @ default path = './databases/db'")
+            self.db.create()
+        if isinstance(db, str):
+            self.db = Database()
+            if not db:
+                db = "./databases/db"
+            if os.path.exists(db):
+                print("Loading Database...")
+                self.db.load(db)
+            else:
+                print(f"Creating New Database @ {db}...")
+                self.db.create(db)
+        elif isinstance(db, Database):
+            self.db = db
+
+    def customize(self, name: str = "RAG Genius", role: str = "assistant", goal: str = "answer questions in a helpful manner", tone: str = "friendly", additional_instructions: Optional[str] = None):
+        self.name = name
+        self.role = role
+        self.goal = goal
+        self.tone = tone
+        self.additional_instructions = additional_instructions
+
+    def invoke(self, query: str, k: int = 5):
+        search_results = self.db.search_and_rank(query, k)
+        search_chunks = [str(result[1]) for result in search_results]
+        
+        search_texts = []
+        for chunk in search_chunks:
+            text_start_index = chunk.find(": ")
+            if text_start_index != -1:
+                text = chunk[text_start_index + 2:]
+                search_texts.append(text)
+            else:
+                search_texts.append(chunk)
+
+        system_prompt = f"Your name is {self.name}. You are an AI {self.role}. Your goal is to {self.goal}. Your tone should be {self.tone}."
+
+        if self.additional_instructions:
+            system_prompt += f" Additional instructions: {self.additional_instructions}"
+
+        system_prompt += "\n\nYou have received the following relevant information to respond to the query:\n\n"
+        system_prompt += "\n".join(search_texts)
+        system_prompt += f"\n\nUse this information to provide a helpful response to the following query: {query}"
+
+        response = self.llm.invoke(
+            system=system_prompt,
+            query=query
+        )
+
+        return response
 
 class Serve:
     """
@@ -44,7 +107,6 @@ class Serve:
 
         This method enters a loop where the user can input their messages, and the chatbot generates responses
         based on the provided LLM or RAG instance. The chat history is stored and updated throughout the conversation.
-
         The user can exit the chat by typing "/exit" or "/bye".
         """
         self.yosemite.say(message=self.prompt, color="rgb(54, 54, 250)", bold=True)

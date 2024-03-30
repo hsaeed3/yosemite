@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="yosemite",
-    version="0.1.08",
+    version="0.1.10",
     author="Hammad Saeed",
     author_email="hammad@supportvectors.com",
     description="yosemite",
@@ -32,6 +32,7 @@ Yosemite
 'anthropic',
 'ebooklib',
 'instructor',
+'mistralai',
 'pandas',
 'pdfminer.six',
 'PyPDF2',
@@ -39,5 +40,6 @@ Yosemite
 'spacy',
 'wheel',
 "Whoosh",
+"xai-sdk",
     ],
 )
